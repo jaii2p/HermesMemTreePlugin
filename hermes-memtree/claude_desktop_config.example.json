@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "memtree": {
+      "command": "/path/to/memtree/run_server.sh"
+    }
+  }
+}

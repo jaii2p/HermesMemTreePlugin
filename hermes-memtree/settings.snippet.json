@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /path/to/memtree/memtree_mcp/hooks/prompt_submit.py",
+            "env": {"MEMTREE_HOME": "/path/to/memtree/var"}
+          }
+        ]
+      }
+    ]
+  }
+}

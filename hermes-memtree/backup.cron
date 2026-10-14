@@ -1,0 +1,12 @@
+# Auto-backup of the two trees (his + agent's).
+#
+# Enable with:
+#   crontab backup.cron          # installs / replaces your crontab (careful!)
+# or manually add the line below to `crontab -e`.
+#
+# Runs nightly at 03:17 and keeps the last 20 snapshots per tree.
+# Offsite: also rsync backups/ to a second machine or the cloud — a backup that
+# only lives on the same dying box is a hope, not a plan.
+
+# minute hour day month weekday   command
+17 3 * * *    /path/to/memtree/backup.sh run >> /path/to/memtree/backups/backup.log 2>&1

@@ -1,0 +1,53 @@
+--- a/store.py	2026-10-12 17:19:30.371072624 -0400
++++ b/store.py	2026-10-12 17:19:30.371738790 -0400
+@@ -207,13 +207,15 @@
+         self.branches: Dict[str, Branch] = {}
+         self.bridges = BridgeTable(max_bridge_degree)
+         self.key_peers: Dict[str, set] = defaultdict(set)
+-        # per peer: word -> keys whose key or value contained it (pruned lazily)
+-        self.words: Dict[str, Dict[str, set]] = defaultdict(lambda: defaultdict(set))
++        # per peer: word -> keys whose key or value contained it (pruned lazily).
++        # Keys live in an insertion-ordered dict (not a set) so a bounded scan can
++        # take the most recent matches deterministically -- never O(tree).
++        self.words: Dict[str, Dict[str, dict]] = defaultdict(lambda: defaultdict(dict))
+ 
+     def index_words(self, peer: str, key: str, value) -> None:
+         idx = self.words[peer]
+         for w in words_of(key) | words_of(value):
+-            idx[w].add(key)
++            idx[w][key] = None
+ 
+     def branch(self, peer: str) -> Branch:
+         if peer not in self.branches:
+--- a/watchdog.py	2026-10-12 17:19:30.372551940 -0400
++++ b/watchdog.py	2026-10-12 17:19:30.373409084 -0400
+@@ -164,14 +164,25 @@
+         q = words_of(query)
+         n = max(len(b), 1)
+         scores: Dict[str, float] = {}
+-        usable = [w for w in q if idx.get(w) and len(idx[w]) <= max_df] or \
+-                 [w for w in q if idx.get(w)][:1]
++        # The scan is bounded by max_df in every case. A word shared by more
++        # memories than that is read only as far as max_df, newest first, so a
++        # query made entirely of common words cannot walk the whole posting (it
++        # used to, which was O(tree) per query); the word still counts in full
++        # toward its own IDF, so scoring is unchanged wherever candidates fit.
++        usable = [w for w in q if idx.get(w) and len(idx[w]) <= max_df]
++        bounded = False
++        if not usable:
++            common = [w for w in q if idx.get(w)]
++            if common:
++                usable = [min(common, key=lambda w: (len(idx[w]), w))]
++                bounded = True
+         for w in usable:
+             posting = idx[w]
+             idf = math.log(1.0 + n / len(posting))
+-            for k in list(posting):
++            keys = list(posting)
++            for k in (keys[-max_df:] if bounded else keys):
+                 if k not in b.index:  # merged or removed since indexed
+-                    posting.discard(k)
++                    posting.pop(k, None)
+                     continue
+                 if k in exclude:
+                     continue

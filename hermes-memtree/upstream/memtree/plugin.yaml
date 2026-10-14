@@ -1,0 +1,11 @@
+name: memtree
+version: 0.1.0
+description: "The Tree: living, log-organized memory with whispers, a recall key, and a watchdog caretaker. Constant-size memory block per turn; memories persist between sessions."
+python_dependencies:
+  - numpy
+hooks:
+  - prefetch
+  - sync_turn
+  - on_pre_compress
+  - on_memory_write
+  - on_session_end
